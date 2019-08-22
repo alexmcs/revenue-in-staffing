@@ -2,11 +2,11 @@ with dates as (
 --    select * from generate_series('{}'::timestamp, '2017-01-01', '-1 week') date
 select *
 from (
-	select * from generate_series('2019-03-31'::timestamp, '2017-01-01', '-1 day') date
+	select * from generate_series('2019-07-31'::timestamp, '2017-01-01', '-1 week') date
 	) d
-where extract(day from date) = 1
-or extract(day from date) = 14
-or extract(day from date) = 28
+--where extract(day from date) = 1
+--or extract(day from date) = 14
+--or extract(day from date) = 28
 )
 select d.date::date, p.*, t.timesheet_date, t2.timesheet_date_max
 from dates d

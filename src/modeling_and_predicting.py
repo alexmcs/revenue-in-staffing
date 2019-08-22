@@ -19,6 +19,49 @@ import model_metrics_prod
 reload(model_metrics_prod)
 import revenue
 reload (revenue)
+import termination
+reload(termination)
+
+
+def is_billable_retrospective_models_training(min_date = '2017-12-31', key = 'is_billable'):
+
+    logger = logging.getLogger(__name__ + ' : is_billable_retrospective_models_training')
+    logger.info('is_billable_retrospective_models_training')
+
+    min_date_dt = datetime.datetime.strptime(min_date, '%Y-%m-%d')
+
+    days = []
+    while min_date_dt < datetime.datetime.today():
+
+        while min_date_dt.month == (min_date_dt + relativedelta(days=1)).month:
+            min_date_dt = min_date_dt + relativedelta(days=1)
+
+        days.append(datetime.datetime.strftime(min_date_dt, '%Y-%m-%d'))
+        min_date_dt = min_date_dt + relativedelta(months=1)
+
+    models = []
+    for f in listdir('../data/'):
+        if '{}_model_'.format(key) in f:
+            models.append(f)
+
+    df = pd.DataFrame(models, columns=['files'])
+    df['date'] = df['files'].map(lambda x: x.split('.')[0][-10:]).astype(str)
+
+    missing_models = []
+    for d in days:
+        if d not in list(df.date):
+            missing_models.append(d)
+
+    for d in missing_models:
+
+        logger = logging.getLogger(__name__ + ' : is_billable_model_training')
+        logger.info('{}_model_training per date={}'.format(key, d))
+
+        rv = termination.Termination(job='model_training', date=d)
+        rv.model_training()
+
+        logger.info('{} is billable model per date {} trained successfully and dumped to pickle file'.format(key, d))
+
 
 
 def revenue_in_staffing_retrospective_models_training(min_date = '2017-12-31', key = 'revenue'):
