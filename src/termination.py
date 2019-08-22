@@ -80,6 +80,8 @@ class Termination(features.Features):
         # self.df = self.df.drop_duplicates('key')
         # self.df = self.df.drop(['key'], 1)
 
+        self.df.date = self.df.date.dt.strftime('%Y-%m-%d')
+
         self.processor_wkl_start_date()
 
         self.df = df_proc.start_processing(self.df)
