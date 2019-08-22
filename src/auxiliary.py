@@ -672,7 +672,7 @@ class DataFrameProcessor:
         df['dates'] = df['date']
 
         df = self.datetime_cols(df, ['last_assigned_date', 'created', 'dates', 'planned_end_date', 'planned_start_date',
-                                     'workload_start_date'])
+                                     'workload_start_date', 'last_staffing_status_update_date'])
         df = self.time_distance(df, 'created', 'workload_start_date', 'distance_between_creation_and_workload_start_date')
         df = self.time_distance(df, 'dates', 'workload_start_date',
                                 'distance_between_snap_date_and_workload_start_date')
@@ -685,6 +685,12 @@ class DataFrameProcessor:
         df = self.time_distance(df, 'created', 'dates', 'time_after_creation')
         df = self.time_distance(df, 'dates', 'planned_start_date', 'time_to_planned_start_date')
         df = self.time_distance(df, 'dates', 'planned_end_date', 'time_to_planned_end_date')
+
+        df = self.time_distance(df, 'last_staffing_status_update_date', 'date',
+                                      'distance_from_last_staffing_status_update_date_to_date')
+
+        df = self.time_distance(df, 'last_staffing_status_update_date', 'planned_start_date',
+                                      'distance_from_last_staffing_status_update_date_to_planned_start_date')
 
         df['wkl_cur_month'] = df.dates.map(lambda d: datetime.datetime.strftime(d, '%Y-%m-%d')[:7])
         df['wkl_next_1_month'] = df.dates.map(

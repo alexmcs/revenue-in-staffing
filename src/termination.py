@@ -98,10 +98,63 @@ class Termination(features.Features):
                 how='left', left_on='position_id', right_index=True
             )
 
-            self.df['target'] = np.where(
+            cols_to_del = ['staffing_status_final']
+
+            self.df['billable'] = np.where(self.df.timesheet_date.notnull(), 1, 0)
+            cols_to_del.append('billable')
+
+            self.df['terminated'] = np.where(
                 (self.df.timesheet_date.isnull()) &
                 (self.df.staffing_status_final == 'Terminated'), 1, 0
             )
+            cols_to_del.append('terminated')
+
+            self.df['cancelled'] = np.where(
+                (self.df.timesheet_date.isnull()) &
+                (self.df.staffing_status_final == 'Closed'), 1, 0
+            )
+            cols_to_del.append('cancelled')
+
+            self.df['active'] = np.where(
+                (self.df.timesheet_date.isnull()) &
+                (self.df.staffing_status_final != 'Terminated') &
+                (self.df.staffing_status_final != 'Closed'), 1, 0
+            )
+            cols_to_del.append('active')
+
+            # 0 - billable;
+            # 1 - cancelled;
+            # 2 - terminated;
+            # 3 - active
+
+            self.df.target = np.where(
+                (self.df.billable == 1), 0, np.where(
+                    (self.df.cancelled == 1), 1, np.where(
+                        (self.df.terminated == 1), 2, 3
+                    )
+                )
+            )
+
+            self.df = self.df.drop(cols_to_del, 1)
+
+
+            params = (list(self.df.date.astype(str).unique()), tuple(self.df.position_id.astype(str).unique()))
+            wkl = postgres.get_data('total_workload.sql', param=params, param_type='tuple')
+            wkl.position_id = wkl.position_id.astype(str)
+
+            self.df = pd.merge(
+                self.df, wkl.set_index(wkl.position_id.astype(str) + wkl.date.astype(str))[['total_workload']],
+                how='left', left_on=self.df.position_id.astype(str) + self.df.date.astype(str), right_index=True
+            )
+
+
+
+
+
+            # self.df['target'] = np.where(
+            #     (self.df.timesheet_date.isnull()) &
+            #     (self.df.staffing_status_final == 'Terminated'), 1, 0
+            # )
 
             self.df = self.df.drop(['staffing_status_final'], 1)
 
