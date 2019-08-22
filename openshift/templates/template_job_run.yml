@@ -27,11 +27,11 @@ objects:
     apiVersion: v1
     metadata:
       name: ${JOB_PROCESS}-${RUN_UID_POSTFIX}
-      namespace: epm-wpm-rampdown
+      namespace: epm-wpm-rev-in-staf
     spec:
       containers:
         - name: ml-container
-          image: docker-registry.default.svc:5000/epm-wpm-rampdown/script-build
+          image: docker-registry.default.svc:5000/epm-wpm-rev-in-staf/script-build
           command: ${{JOB_PARAMS}}
           resources:
             limits:
