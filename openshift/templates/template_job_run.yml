@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: template-job-run
+  annotations:
+    openshift.io/display-name: "Single Pod Template"
+    description: "Creates a single Run object from passed parameters."
+    tags: "model,run"
+    iconClass: "icon-load-balancer"
+labels:
+  template: "template-job-run"
+parameters:
+- name: "RUN_UID_POSTFIX"
+  description: "Generated postfix to the run ID."
+  generate: expression
+  from: "[a-z0-9]{5}"
+- name: "JOB_PARAMS"
+  description: "Command to run for the job"
+- name: "JOB_PROCESS"
+  description: "Base name to use for the job and pod."
+- name: "LIMIT_MEMORY"
+  description: "Memory limit to kill the pod."
+- name: "REQUEST_MEMORY"
+  description: "Request memory to run the pod."
+objects:
+  - kind: Pod
+    apiVersion: v1
+    metadata:
+      name: ${JOB_PROCESS}-${RUN_UID_POSTFIX}
+      namespace: epm-wpm-rampdown
+    spec:
+      containers:
+        - name: ml-container
+          image: docker-registry.default.svc:5000/epm-wpm-rampdown/script-build
+          command: ${{JOB_PARAMS}}
+          resources:
+            limits:
+              memory: ${LIMIT_MEMORY}
+            requests:
+              memory: ${REQUEST_MEMORY}
+          tty: true
+          volumeMounts:
+            - mountPath: /ml/src/credentials.py
+              name: config
+              subPath: credentials.py
+            - mountPath: /ml/data
+              name: ml-data
+          imagePullPolicy: Always
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - ecsc00a03e07.epam.com
+                - ecsc00a03e08.epam.com
+                - ecsc00a04290.epam.com
+      volumes:
+      - name:  config
+        secret:
+          secretName: credentials
+      - name: ml-data
+        persistentVolumeClaim:
+          claimName: machine-learning-nfs-40
+      restartPolicy: Never

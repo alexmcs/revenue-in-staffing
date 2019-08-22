@@ -1,0 +1,2 @@
+select *
+from wpm_anlt.epm_wpm_ds_staff_best_parameters

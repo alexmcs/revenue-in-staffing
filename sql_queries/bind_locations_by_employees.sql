@@ -1,0 +1,2 @@
+select employee_id, location_name, full_name
+from wpm_head.epm_staf_m_employees
