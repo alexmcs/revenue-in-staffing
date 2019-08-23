@@ -60,7 +60,7 @@ def is_billable_retrospective_models_training(min_date = '2017-12-31', key = 'is
         tm = termination.Termination(job='model_training', date=d)
         tm.model_training()
 
-        logger.info('{} is billable model per date {} trained successfully and dumped to pickle file'.format(key, d))
+        logger.info('{} is billable models per date {} trained successfully and dumped to pickle file'.format(key, d))
 
 
 

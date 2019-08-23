@@ -267,7 +267,12 @@ class Termination(features.Features):
 
         logger.info('model_training: {}'.format(self.key))
 
+        logger.info('in_staffing scope model training script started')
+
         train = self.df.copy()
+
+        train = train[train.staffing_status != 'Assigned']
+        train = train[train.staffing_channels.map(lambda x: x[0]) != 'No staffing required']
 
         text_data_columns, categorical_data_columns, multicategorical_data_columns, numeric_data_columns = \
             variable_selection.variable_selection(train)
@@ -288,10 +293,72 @@ class Termination(features.Features):
 
         model.fit(X_train, y_train)
 
-        filename = '../data/revenue_model_{}.sav'.format(self.date)
+        filename = '../data/is_billable_in_staffing_model_{}.sav'.format(self.date)
         pickle.dump(model, open(filename, 'wb'))
 
-        logger.info('{} probability model trained successfully and dumped to pickle file'.format(self.key))
+        logger.info('{} is_billable_in_staffing_model_ trained successfully and dumped to pickle file'.format(self.key))
+
+
+        logger.info('assigned scope model training script started')
+
+        train = self.df.copy()
+
+        train = train[train.staffing_status == 'Assigned']
+
+        text_data_columns, categorical_data_columns, multicategorical_data_columns, numeric_data_columns = \
+            variable_selection.variable_selection(train)
+
+        train[categorical_data_columns] = train[categorical_data_columns].astype(str)
+
+        X_train, y_train = data_splitting.X_y_split(train)
+
+        model = pipeline_classes.PipelineEx([
+            ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
+                                                   multicategorical_data_columns=multicategorical_data_columns,
+                                                   numeric_data_columns=numeric_data_columns)),
+            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=3))
+        ])
+
+        self.model_best_params()
+        model.set_params(**self.best_params)
+
+        model.fit(X_train, y_train)
+
+        filename = '../data/is_billable_assigned_model_{}.sav'.format(self.date)
+        pickle.dump(model, open(filename, 'wb'))
+
+        logger.info('{} is_billable_assigned_model_ trained successfully and dumped to pickle file'.format(self.key))
+
+
+        logger.info('no_staffing_required scope model training script started')
+
+        train = self.df.copy()
+
+        train = train[train.staffing_channels.map(lambda x: x[0]) == 'No staffing required']
+
+        text_data_columns, categorical_data_columns, multicategorical_data_columns, numeric_data_columns = \
+            variable_selection.variable_selection(train)
+
+        train[categorical_data_columns] = train[categorical_data_columns].astype(str)
+
+        X_train, y_train = data_splitting.X_y_split(train)
+
+        model = pipeline_classes.PipelineEx([
+            ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
+                                                   multicategorical_data_columns=multicategorical_data_columns,
+                                                   numeric_data_columns=numeric_data_columns)),
+            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=3))
+        ])
+
+        self.model_best_params()
+        model.set_params(**self.best_params)
+
+        model.fit(X_train, y_train)
+
+        filename = '../data/is_billable_no_staffing_required_model_{}.sav'.format(self.date)
+        pickle.dump(model, open(filename, 'wb'))
+
+        logger.info('{} is_billable_no_staffing_required_model_ trained successfully and dumped to pickle file'.format(self.key))
 
 
     def making_predictions(self, model_file, dates_type='none'):
