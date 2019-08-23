@@ -1,9 +1,9 @@
 with dates as (
---    select * from generate_series('{}'::timestamp, '2017-01-01', '-1 week') date
-select *
-from (
-	select * from generate_series('2019-07-31'::timestamp, '2017-01-01', '-15 days') date
-	) d
+    select * from generate_series('{0}'::timestamp, '{0}'::timestamp - interval '1 year', '-1 week') date
+--select *
+--from (
+--	select * from generate_series('2019-07-31'::timestamp, '2017-01-01', '-15 days') date
+--	) d
 --where extract(day from date) = 1
 --or extract(day from date) = 14
 --or extract(day from date) = 28
