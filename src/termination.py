@@ -156,8 +156,6 @@ class Termination(features.Features):
             #     (self.df.staffing_status_final == 'Terminated'), 1, 0
             # )
 
-            self.df = self.df.drop(['staffing_status_final'], 1)
-
             max_date = pd.DataFrame(self.df.groupby(['position_id'])['date'].max()).reset_index()
             max_date['position_id'] = max_date['position_id'].astype(str)
             self.df['position_id'] = self.df['position_id'].astype(str)
