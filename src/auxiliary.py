@@ -686,7 +686,7 @@ class DataFrameProcessor:
         df = self.time_distance(df, 'dates', 'planned_start_date', 'time_to_planned_start_date')
         df = self.time_distance(df, 'dates', 'planned_end_date', 'time_to_planned_end_date')
 
-        df = self.time_distance(df, 'last_staffing_status_update_date', 'date',
+        df = self.time_distance(df, 'last_staffing_status_update_date', 'dates',
                                       'distance_from_last_staffing_status_update_date_to_date')
 
         df = self.time_distance(df, 'last_staffing_status_update_date', 'planned_start_date',
