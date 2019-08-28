@@ -4,6 +4,7 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 import numpy as np
 import datetime
+import gc
 import auxiliary as aux
 import json
 import xgboost as xgb
@@ -269,7 +270,12 @@ class Termination(features.Features):
 
         train[categorical_data_columns] = train[categorical_data_columns].astype(str)
 
-        X_train, y_train = data_splitting.X_y_split(train)
+        X_train = train[
+            text_data_columns + categorical_data_columns + multicategorical_data_columns + numeric_data_columns]
+        y_train = train['target']
+
+        del train
+        gc.collect()
 
         model = pipeline_classes.PipelineEx([
             ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
@@ -300,7 +306,12 @@ class Termination(features.Features):
 
         train[categorical_data_columns] = train[categorical_data_columns].astype(str)
 
-        X_train, y_train = data_splitting.X_y_split(train)
+        X_train = train[
+            text_data_columns + categorical_data_columns + multicategorical_data_columns + numeric_data_columns]
+        y_train = train['target']
+
+        del train
+        gc.collect()
 
         model = pipeline_classes.PipelineEx([
             ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
@@ -331,7 +342,12 @@ class Termination(features.Features):
 
         train[categorical_data_columns] = train[categorical_data_columns].astype(str)
 
-        X_train, y_train = data_splitting.X_y_split(train)
+        X_train = train[
+            text_data_columns + categorical_data_columns + multicategorical_data_columns + numeric_data_columns]
+        y_train = train['target']
+
+        del train
+        gc.collect()
 
         model = pipeline_classes.PipelineEx([
             ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
