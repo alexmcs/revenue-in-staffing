@@ -148,14 +148,6 @@ class Termination(features.Features):
             )
 
 
-
-
-
-            # self.df['target'] = np.where(
-            #     (self.df.timesheet_date.isnull()) &
-            #     (self.df.staffing_status_final == 'Terminated'), 1, 0
-            # )
-
             max_date = pd.DataFrame(self.df.groupby(['position_id'])['date'].max()).reset_index()
             max_date['position_id'] = max_date['position_id'].astype(str)
             self.df['position_id'] = self.df['position_id'].astype(str)
@@ -283,7 +275,7 @@ class Termination(features.Features):
             ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
                                                    multicategorical_data_columns=multicategorical_data_columns,
                                                    numeric_data_columns=numeric_data_columns)),
-            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=3))
+            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=4))
         ])
 
         self.model_best_params()
@@ -314,7 +306,7 @@ class Termination(features.Features):
             ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
                                                    multicategorical_data_columns=multicategorical_data_columns,
                                                    numeric_data_columns=numeric_data_columns)),
-            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=3))
+            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=4))
         ])
 
         self.model_best_params()
@@ -345,7 +337,7 @@ class Termination(features.Features):
             ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
                                                    multicategorical_data_columns=multicategorical_data_columns,
                                                    numeric_data_columns=numeric_data_columns)),
-            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=3))
+            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=4))
         ])
 
         self.model_best_params()
