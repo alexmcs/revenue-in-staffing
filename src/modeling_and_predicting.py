@@ -23,7 +23,7 @@ import termination
 reload(termination)
 
 
-def is_billable_retrospective_models_training(min_date = '2017-12-31', key = 'is_billable'):
+def is_billable_retrospective_models_training(min_date = '2019-07-31', key = 'is_billable'):
 
     logger = logging.getLogger(__name__ + ' : is_billable_retrospective_models_training')
     logger.info('is_billable_retrospective_models_training')
