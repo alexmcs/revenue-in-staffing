@@ -128,7 +128,7 @@ class Termination(features.Features):
             # 2 - terminated;
             # 3 - active
 
-            self.df.target = np.where(
+            self.df['target'] = np.where(
                 (self.df.billable == 1), 0, np.where(
                     (self.df.cancelled == 1), 1, np.where(
                         (self.df.terminated == 1), 2, 3
