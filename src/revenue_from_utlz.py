@@ -211,6 +211,7 @@ class RevFromUtlz():
         logger.info('starting write results for date = {} and period = {} into datalake'.format(self.date, period))
 
         df.insert(loc=len(df.columns), column='date', value=df.shape[0] * [self.date])
+        df.insert(loc=len(df.columns), column='period', value=df.shape[0] * [period])
 
         df = df[df.position_id.notnull()]
 
