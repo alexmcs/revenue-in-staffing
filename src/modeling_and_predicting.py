@@ -21,6 +21,14 @@ import revenue
 reload (revenue)
 import termination
 reload(termination)
+import revenue_from_utlz
+reload(revenue_from_utlz)
+
+
+def revenue_from_utilization_script():
+
+    rev = revenue_from_utlz.RevFromUtlz()
+    rev.make_predictions()
 
 
 def is_billable_retrospective_models_training(min_date = '2019-07-31', key = 'is_billable'):
