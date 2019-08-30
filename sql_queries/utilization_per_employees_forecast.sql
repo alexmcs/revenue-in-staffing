@@ -1,4 +1,4 @@
-select employee_id, (reported+predicted) as predicted_hours, ext_wl, pos.position_id, pos.monthly_workload
+select employee_id, (reported+predicted) as predicted_hours, ext_wl, pos.position_id::text, pos.monthly_workload
 from wpm_anlt.epm_wpm_utlz_prediction_user u
 	left join
 		(

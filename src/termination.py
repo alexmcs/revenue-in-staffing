@@ -20,7 +20,7 @@ import features
 reload (features)
 
 
-logger = logging.getLogger('rampdown')
+logger = logging.getLogger('is_billable')
 
 class Termination(features.Features):
 
