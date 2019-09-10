@@ -280,7 +280,7 @@ class RevenueInStaffing(features.Features):
             filename = '../data/revenue_{}_model_{}.sav'.format(scope, self.date)
             pickle.dump(model, open(filename, 'wb'))
 
-            logger.info('{} probability model for scope {} trained successfully and dumped to pickle file'.format(self.key), scope)
+            logger.info('{} probability model for scope {} trained successfully and dumped to pickle file'.format(self.key, scope)
 
 
     def making_predictions(self, model_file, dates_type='none'):
