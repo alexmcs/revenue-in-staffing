@@ -260,7 +260,7 @@ def is_billable_retrospective_predictions(key = 'is_billable'):
         dates = tmp.at[ind, 'dates_without_predictions']
 
         tm = termination.Termination(job='making_predictions', date=dates)
-        tm.making_predictions(model_file=model_files)
+        tm.making_predictions(model_files=model_files)
 
     if tmp[tmp.list_len == 1].shape[0] >=1:
 
@@ -274,6 +274,6 @@ def is_billable_retrospective_predictions(key = 'is_billable'):
             )
 
             tm = termination.Termination(job='making_predictions', date=dates)
-            tm.making_predictions(model_file=model_files, dates_type='single_day')
+            tm.making_predictions(model_files=model_files, dates_type='single_day')
 
     logger.info('is_billable making predictions script successfully finished')

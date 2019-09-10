@@ -402,6 +402,7 @@ class Termination(features.Features):
                     ]
 
             logger.info(scope)
+            logger.info('predicting with model file {}'.format(model_file))
 
             filename = '../data/{}'.format(model_file)
             model = pickle.load(open(filename, 'rb'))
