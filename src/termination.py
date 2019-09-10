@@ -43,15 +43,15 @@ class Termination(features.Features):
         self.job = job
         self.date = date
         if self.job == 'model_training':
-            self.key = 'position_termination_' + self.job + '_' + self.date
+            self.key = 'is_billable' + self.job + '_' + self.date
         else:
-            self.key = 'position_termination_' + self.job + '_' + self.date[-1][:7]
+            self.key = 'is_billable' + self.job + '_' + self.date[-1][:7]
 
         logger.info('{} dataset creation query started'.format(self.key))
 
         if job == 'making_predictions':
 
-            self.df = postgres.get_data('active_positions_to_make_predictions.sql',  param=self.date, param_type='list')
+            self.df = postgres.get_data('whole_active_positions_to_make_predictions_is_billable.sql',  param=self.date, param_type='list')
 
         elif job == 'model_training':
 
@@ -84,6 +84,25 @@ class Termination(features.Features):
         self.processor_wkl_start_date()
 
         self.df = df_proc.start_processing(self.df)
+
+        params = (list(self.df.date.astype(str).unique()), tuple(self.df.position_id.astype(str).unique()))
+        wkl = postgres.get_data('total_workload.sql', param=params, param_type='tuple')
+        wkl.position_id = wkl.position_id.astype(str)
+
+        self.df = pd.merge(
+            self.df, wkl.set_index(wkl.position_id.astype(str) + wkl.date.astype(str))[['total_workload']],
+            how='left', left_on=self.df.position_id.astype(str) + self.df.date.astype(str), right_index=True
+        )
+
+        max_date = pd.DataFrame(self.df.groupby(['position_id'])['date'].max()).reset_index()
+        max_date['position_id'] = max_date['position_id'].astype(str)
+        self.df['position_id'] = self.df['position_id'].astype(str)
+
+        self.df = pd.merge(
+            self.df,
+            max_date.set_index('position_id').rename(columns={'date': 'max_date'}),
+            how='left', left_on='position_id', right_index=True
+        )
 
         if self.job == 'model_training':
 
@@ -138,32 +157,12 @@ class Termination(features.Features):
 
             self.df = self.df.drop(cols_to_del, 1)
 
-
-            params = (list(self.df.date.astype(str).unique()), tuple(self.df.position_id.astype(str).unique()))
-            wkl = postgres.get_data('total_workload.sql', param=params, param_type='tuple')
-            wkl.position_id = wkl.position_id.astype(str)
-
-            self.df = pd.merge(
-                self.df, wkl.set_index(wkl.position_id.astype(str) + wkl.date.astype(str))[['total_workload']],
-                how='left', left_on=self.df.position_id.astype(str) + self.df.date.astype(str), right_index=True
-            )
-
-
-            max_date = pd.DataFrame(self.df.groupby(['position_id'])['date'].max()).reset_index()
-            max_date['position_id'] = max_date['position_id'].astype(str)
-            self.df['position_id'] = self.df['position_id'].astype(str)
-
-            self.df = pd.merge(
-                self.df,
-                max_date.set_index('position_id').rename(columns={'date': 'max_date'}),
-                how='left', left_on='position_id', right_index=True
-            )
-
-            self.df.date = self.df.date.dt.strftime('%Y-%m-%d')
-
         elif self.job == 'making_predictions':
 
             self.df['target'] = 0
+
+        self.df = df_proc.datetime_cols(self.df, ['date'])
+        self.df.date = self.df.date.dt.strftime('%Y-%m-%d')
 
         logger.debug(self.df.shape)
         self.processor_project_information()
@@ -367,48 +366,77 @@ class Termination(features.Features):
         logger.info('{} is_billable_no_staffing_required_model_ trained successfully and dumped to pickle file'.format(self.key))
 
 
-    def making_predictions(self, model_file, dates_type='none'):
+    def making_predictions(self, model_files, dates_type='none'):
 
         logger.info('{} making predictions script started'.format(self.key))
 
+        df_proc = aux.DataFrameProcessor()
         self.feature_processing()
 
-        logger.debug('date parameter in the revenue object are {}'.format(str(self.date)))
+        logger.debug('date parameter in the object are {}'.format(str(self.date)))
 
         if dates_type != 'none':
             self.df = self.df[self.df.date == max(self.df.date)]
 
         logger.info('{} making predictions script started'.format(self.key))
 
-        filename = '../data/{}'.format(model_file)
-        model = pickle.load(open(filename, 'rb'))
+        to_datahub = ToDatahubWriter('rev_in_staf_is_billable')  # rename to table name
 
-        to_datahub = ToDatahubWriter('{}_predictions'.format('revenue')) #rename to table name
+        for model_file in model_files:
 
-        self.df.date = self.df.date.astype(str)
+            scope = model_file[12:][:-21]
 
-        for d in self.df.date.unique():
+            if scope == 'assigned':
+                df = self.df[self.df.staffing_status == 'Assigned']
 
-            logger.debug(d)
+            elif scope == 'no_staffing_required':
+                df = self.df[
+                    (self.df.staffing_channels.map(lambda x: x[0]) == 'No staffing required') &
+                    (self.df.staffing_status != 'Assigned')
+                    ]
 
-            X_predict, y = data_splitting.X_y_split(self.df[self.df.date == d])
+            elif scope == 'in_staffing':
+                df = self.df[
+                    (self.df.staffing_status != 'Assigned') &
+                    (self.df.staffing_channels.map(lambda x: x[0]) != 'No staffing required')
+                    ]
 
-            revenue_prediction = model.predict_proba(X_predict)
+            logger.info(scope)
 
-            prd = X_predict.copy()
+            filename = '../data/{}'.format(model_file)
+            model = pickle.load(open(filename, 'rb'))
 
-            prd.insert(len(prd.columns), column='revenue_current_month_probability', value=revenue_prediction[:, 0])
-            prd.insert(len(prd.columns), column='revenue_next_month_probability', value=revenue_prediction[:, 1])
-            prd.insert(len(prd.columns), column='revenue_after_next_month_probability', value=revenue_prediction[:, 2])
+            df = df_proc.datetime_cols(df, ['date'])
+            df.date = df.date.dt.strftime('%Y-%m-%d')
 
-            assert len(
-                prd) > 3000, 'workload_extension_predictions data set has a problem! Too small data set!!!'
+            text_data_columns, categorical_data_columns, multicategorical_data_columns, numeric_data_columns = \
+                variable_selection.variable_selection(df)
 
-            prd = prd[['revenue_prediction', 'position_id']]
-            prd.insert(len(prd.columns), column='date', value=d)
+            df[categorical_data_columns] = df[categorical_data_columns].astype(str)
 
-            prd = prd.set_index('position_id')
+            for d in df.date.unique():
 
-            to_datahub.write_info(prd, task_name='revenue')
+                logger.debug(d)
 
-            logger.info('{} predictions per date={} are successfully written to datahub'.format(self.key, d))
+                X_predict = df[df.date == d][
+                    text_data_columns + categorical_data_columns + multicategorical_data_columns + numeric_data_columns]
+                y = df[df.date == d]['target']
+
+                prediction = model.predict_proba(X_predict)
+
+                prd = df[df.date == d]
+
+                prd.insert(len(prd.columns), column='is_billable_prediction', value=prediction[:, 0])
+
+                # assert len(
+                #     prd) > 3000, 'predictions data set has a problem! Too small data set!!!'
+
+                prd = prd[['is_billable_prediction', 'position_id']]
+                prd.insert(len(prd.columns), column='date', value=d)
+                prd.insert(len(prd.columns), column='scope', value=scope)
+
+                prd = prd.set_index('position_id')
+
+                to_datahub.write_info(prd, task_name='is_billable_'.format(scope))
+
+                logger.info('{} predictions per date={} for scope {} are successfully written to datahub'.format(self.key, d, scope))

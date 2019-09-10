@@ -17,7 +17,7 @@ left join
         admin_project_agg, container_locations, container_name, container_type, container_staffing_coordinators,
         last_staffing_status_update_date, supply_owners, seniority_level, demand_owners, pmc_roles, gbu_id, customer_name
         from wpm_all.epm_staf_m_positions pos2
-        where pos2.created >= date'2014-01-01' and staffing_status not in ('Assigned', 'Terminated',
+        where pos2.created >= date'2014-01-01' and staffing_status not in ('Terminated',
         'On Hold', 'Closed') and billing_type_id = '1' and customer_id != '314427597' -- not EPAM Inc
         ) p on p.bt @> d.date::timestamp
 left join
@@ -31,3 +31,4 @@ left join
             ) temp
         group by position_id
         ) t on p.position_id::text = t.position_id
+where t.timesheet_date is null

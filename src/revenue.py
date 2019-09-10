@@ -186,6 +186,8 @@ class RevenueInStaffing(features.Features):
         logger.debug(self.df.shape)
         self.processor_date_of_starting_version_growth()
         logger.debug(self.df.shape)
+        self.processor_business_days()
+        logger.debug(self.df.shape)
 
 
     def crm_info_processing(self):

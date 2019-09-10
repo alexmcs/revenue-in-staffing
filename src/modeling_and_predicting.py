@@ -72,7 +72,7 @@ def is_billable_retrospective_models_training(min_date = '2019-07-31', key = 'is
 
 
 
-def revenue_in_staffing_retrospective_models_training(min_date = '2017-12-31', key = 'revenue'):
+def revenue_in_staffing_retrospective_models_training(min_date = '2019-08-31', key = 'revenue'):
 
     logger = logging.getLogger(__name__ + ' : revenue_in_staffing_retrospective_models_training')
     logger.info('revenue_in_staffing_retrospective_models_training')
@@ -184,3 +184,96 @@ def revenue_in_staffing_retrospective_predictions(key = 'revenue'):
             rv.making_predictions(model_file=model_file, dates_type='single_day')
 
     logger.info('revenue in staffing making predictions script successfully finished')
+
+
+def is_billable_retrospective_predictions(key = 'is_billable'):
+
+    logger = logging.getLogger(__name__ + ' : is_billable_retrospective_predictions')
+    logger.info('is_billable_retrospective_predictions')
+    postgres = PostgreSQLBase()
+
+    def list_of_dates(x):
+        lst = []
+        d = datetime.datetime.strptime(x['date'], '%Y-%m-%d')
+
+        while d < datetime.datetime.strptime(x['next_date'], '%Y-%m-%d'):
+            lst.append(datetime.datetime.strftime(d, '%Y-%m-%d'))
+            d = d + relativedelta(days=1)
+
+        return lst
+
+    def query_list_of_dates(x):
+
+        try:
+            params = (key, x['date'], x['next_date'])
+            df = postgres.get_data('days_list_for_predictions.sql', param=params, param_type='tuple')
+
+            return list(df.date)
+
+        except AttributeError:
+            return []
+
+    def dates_without_predictions(x):
+
+        return list(set(x['list_of_dates']) - set(x['dates_with_predictions']))
+
+    def models_list(x):
+
+        return [x['assigned'], x['in_staffing'], x['no_staffing_required']]
+
+    files = []
+
+    for scope in ['no_staffing_required', 'assigned', 'in_staffing']:
+
+        for f in listdir('../data/'):
+            if '{}_{}_model_'.format(key, scope) in f:
+                files.append(f)
+
+    df = pd.DataFrame(files, columns=['files'])
+    df['date'] = df['files'].map(lambda x: x.split('.')[0][-10:]).astype(str)
+
+    df['scope'] = df.files.map(lambda f: f[12:][:-21])
+
+    tmp = pd.DataFrame()
+    tmp['date'] = df.date.unique()
+    tmp = tmp.sort_values('date')
+    tmp['next_date'] = tmp.date.shift(-1).fillna(datetime.datetime.strftime(datetime.datetime.today(), '%Y-%m-%d'))
+
+    for scope in ['no_staffing_required', 'assigned', 'in_staffing']:
+        tmp[scope] = tmp.date.map(lambda d: list(df[(df.date == d) & (df.scope == scope)].files))
+        tmp[scope] = tmp[scope].map(lambda a: a[0] if a else None)
+        tmp[scope] = tmp[scope].fillna(method='ffill')
+
+    tmp['models'] = tmp.apply(models_list, axis=1)
+    tmp = tmp.drop(['no_staffing_required', 'assigned', 'in_staffing'], 1)
+
+    tmp['list_of_dates'] = tmp.apply(list_of_dates, axis=1)
+    tmp['dates_with_predictions'] = tmp.apply(query_list_of_dates, axis=1)
+    tmp['dates_without_predictions'] = tmp.apply(dates_without_predictions, axis=1)
+    tmp['list_len'] = tmp['dates_without_predictions'].map(lambda x: len(x))
+    tmp = tmp[tmp['list_len'] != 0]
+    tmp = tmp.drop(['date', 'next_date', 'list_of_dates', 'dates_with_predictions'], 1)
+
+    for ind in tmp[tmp.list_len > 1].index:
+
+        model_files = tmp.at[ind, 'models']
+        dates = tmp.at[ind, 'dates_without_predictions']
+
+        tm = termination.Termination(job='making_predictions', date=dates)
+        tm.making_predictions(model_file=model_files)
+
+    if tmp[tmp.list_len == 1].shape[0] >=1:
+
+        for ind in tmp[tmp.list_len == 1].index:
+
+            model_files = tmp.at[ind, 'models']
+            dates = tmp.at[ind, 'dates_without_predictions']
+            dates.append(
+                datetime.datetime.strftime(
+                    datetime.datetime.strptime(dates[0], '%Y-%m-%d') - relativedelta(days=1), '%Y-%m-%d')
+            )
+
+            tm = termination.Termination(job='making_predictions', date=dates)
+            tm.making_predictions(model_file=model_files, dates_type='single_day')
+
+    logger.info('is_billable making predictions script successfully finished')
