@@ -59,3 +59,4 @@ left join
 where d.date < t.timesheet_date
 --or t.timesheet_date is null
 and t.timesheet_date is not null
+and d.date < current_date

@@ -238,31 +238,49 @@ class RevenueInStaffing(features.Features):
 
         logger.info('model_training: {}'.format(self.key))
 
-        train = self.df.copy()
+        for scope in ['no_staffing_required', 'assigned', 'in_staffing']:
 
-        text_data_columns, categorical_data_columns, multicategorical_data_columns, numeric_data_columns = \
-            variable_selection.variable_selection(train)
+            logger.info('{} scope model training script started'.format(scope))
 
-        train[categorical_data_columns] = train[categorical_data_columns].astype(str)
+            if scope == 'assigned':
+                train = self.df[self.df.staffing_status == 'Assigned']
 
-        X_train, y_train = data_splitting.X_y_split(train)
+            elif scope == 'no_staffing_required':
+                train = self.df[
+                    (self.df.staffing_channels.map(lambda x: x[0]) == 'No staffing required')
+                    ]
 
-        model = pipeline_classes.PipelineEx([
-            ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
-                                                   multicategorical_data_columns=multicategorical_data_columns,
-                                                   numeric_data_columns=numeric_data_columns)),
-            ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=3))
-        ])
+            elif scope == 'in_staffing':
+                train = self.df[
+                    (self.df.staffing_status != 'Assigned') &
+                    (self.df.staffing_channels.map(lambda x: x[0]) != 'No staffing required')
+                    ]
 
-        self.model_best_params()
-        model.set_params(**self.best_params)
+            text_data_columns, categorical_data_columns, multicategorical_data_columns, numeric_data_columns = \
+                variable_selection.variable_selection(train)
 
-        model.fit(X_train, y_train)
+            train[categorical_data_columns] = train[categorical_data_columns].astype(str)
 
-        filename = '../data/revenue_model_{}.sav'.format(self.date)
-        pickle.dump(model, open(filename, 'wb'))
+            X_train = train[
+                text_data_columns + categorical_data_columns + multicategorical_data_columns + numeric_data_columns]
+            y_train = train['target']
 
-        logger.info('{} probability model trained successfully and dumped to pickle file'.format(self.key))
+            model = pipeline_classes.PipelineEx([
+                ('features', pipeline_classes.features(categorical_data_columns=categorical_data_columns,
+                                                       multicategorical_data_columns=multicategorical_data_columns,
+                                                       numeric_data_columns=numeric_data_columns)),
+                ('classifier', xgb.XGBClassifier(n_jobs=-1, objective='multi:softmax', num_class=4))
+            ])
+
+            self.model_best_params()
+            model.set_params(**self.best_params)
+
+            model.fit(X_train, y_train)
+
+            filename = '../data/revenue_{}_model_{}.sav'.format(scope, self.date)
+            pickle.dump(model, open(filename, 'wb'))
+
+            logger.info('{} probability model for scope {} trained successfully and dumped to pickle file'.format(self.key), scope)
 
 
     def making_predictions(self, model_file, dates_type='none'):

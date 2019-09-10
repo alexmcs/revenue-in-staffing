@@ -72,26 +72,32 @@ def is_billable_retrospective_models_training(min_date = '2019-07-31', key = 'is
 
 
 
-def revenue_in_staffing_retrospective_models_training(min_date = '2019-08-31', key = 'revenue'):
+def revenue_in_staffing_retrospective_models_training(min_date = '2019-09-01', key = 'revenue'):
 
     logger = logging.getLogger(__name__ + ' : revenue_in_staffing_retrospective_models_training')
     logger.info('revenue_in_staffing_retrospective_models_training')
 
-    min_date_dt = datetime.datetime.strptime(min_date, '%Y-%m-%d')
+    min_date_dt = datetime.datetime.strptime(min_date, '%Y-%m-%d').date()
 
     days = []
-    while min_date_dt < datetime.datetime.today():
 
-        while min_date_dt.month == (min_date_dt + relativedelta(days=1)).month:
-            min_date_dt = min_date_dt + relativedelta(days=1)
-
+    while min_date_dt < datetime.date.today():
         days.append(datetime.datetime.strftime(min_date_dt, '%Y-%m-%d'))
+
+        while (min_date_dt.month == (min_date_dt + relativedelta(days=7)).month) & \
+                (min_date_dt < datetime.date.today() - relativedelta(days=7)):
+            min_date_dt = min_date_dt + relativedelta(days=7)
+            days.append(datetime.datetime.strftime(min_date_dt, '%Y-%m-%d'))
+
+        min_date_dt = min_date_dt - relativedelta(days=7)
         min_date_dt = min_date_dt + relativedelta(months=1)
+        min_date_dt = min_date_dt.replace(day=1)
 
     models = []
-    for f in listdir('../data/'):
-        if '{}_model_'.format(key) in f:
-            models.append(f)
+    for scope in ['no_staffing_required', 'assigned', 'in_staffing']:
+        for f in listdir('../data/'):
+            if '{}_{}_model_'.format(key, scope) in f:
+                models.append(f)
 
     df = pd.DataFrame(models, columns=['files'])
     df['date'] = df['files'].map(lambda x: x.split('.')[0][-10:]).astype(str)
