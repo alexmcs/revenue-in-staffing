@@ -297,9 +297,6 @@ class RevenueInStaffing(features.Features):
 
         logger.info('{} making predictions script started'.format(self.key))
 
-        filename = '../data/{}'.format(model_files)
-        model = pickle.load(open(filename, 'rb'))
-
         to_datahub = ToDatahubWriter('rev_in_staf_revenue_probability') #rename to table name
 
         for model_file in model_files:
