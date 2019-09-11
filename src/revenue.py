@@ -283,48 +283,87 @@ class RevenueInStaffing(features.Features):
             logger.info('{} probability model for scope {} trained successfully and dumped to pickle file'.format(self.key, scope))
 
 
-    def making_predictions(self, model_file, dates_type='none'):
+    def making_predictions(self, model_files, dates_type='none'):
 
         logger.info('{} making predictions script started'.format(self.key))
 
-        self.feature_processing()
-
         logger.debug('date parameter in the revenue object are {}'.format(str(self.date)))
+
+        df_proc = aux.DataFrameProcessor()
+        self.feature_processing()
 
         if dates_type != 'none':
             self.df = self.df[self.df.date == max(self.df.date)]
 
         logger.info('{} making predictions script started'.format(self.key))
 
-        filename = '../data/{}'.format(model_file)
+        filename = '../data/{}'.format(model_files)
         model = pickle.load(open(filename, 'rb'))
 
-        to_datahub = ToDatahubWriter('{}_predictions'.format('revenue')) #rename to table name
+        to_datahub = ToDatahubWriter('rev_in_staf_revenue_probability') #rename to table name
 
-        self.df.date = self.df.date.astype(str)
+        for model_file in model_files:
 
-        for d in self.df.date.unique():
+            scope = model_file[8:][:-21]
 
-            logger.debug(d)
+            if scope == 'assigned':
+                df = self.df[self.df.staffing_status == 'Assigned']
 
-            X_predict, y = data_splitting.X_y_split(self.df[self.df.date == d])
+            elif scope == 'no_staffing_required':
+                df = self.df[
+                    (self.df.staffing_channels.map(lambda x: x[0]) == 'No staffing required') &
+                    (self.df.staffing_status != 'Assigned')
+                    ]
 
-            revenue_prediction = model.predict_proba(X_predict)
+            elif scope == 'in_staffing':
+                df = self.df[
+                    (self.df.staffing_status != 'Assigned') &
+                    (self.df.staffing_channels.map(lambda x: x[0]) != 'No staffing required')
+                    ]
 
-            prd = X_predict.copy()
+            logger.info(scope)
+            logger.info('predicting with model file {}'.format(model_file))
 
-            prd.insert(len(prd.columns), column='revenue_current_month_probability', value=revenue_prediction[:, 0])
-            prd.insert(len(prd.columns), column='revenue_next_month_probability', value=revenue_prediction[:, 1])
-            prd.insert(len(prd.columns), column='revenue_after_next_month_probability', value=revenue_prediction[:, 2])
+            filename = '../data/{}'.format(model_file)
+            model = pickle.load(open(filename, 'rb'))
 
-            assert len(
-                prd) > 3000, 'workload_extension_predictions data set has a problem! Too small data set!!!'
+            df = df_proc.datetime_cols(df, ['date'])
+            df.date = df.date.dt.strftime('%Y-%m-%d')
 
-            prd = prd[['revenue_prediction', 'position_id']]
-            prd.insert(len(prd.columns), column='date', value=d)
+            text_data_columns, categorical_data_columns, multicategorical_data_columns, numeric_data_columns = \
+                variable_selection.variable_selection(df)
 
-            prd = prd.set_index('position_id')
+            df[categorical_data_columns] = df[categorical_data_columns].astype(str)
 
-            to_datahub.write_info(prd, task_name='revenue')
+            for d in df.date.unique():
+                logger.debug(d)
 
-            logger.info('{} predictions per date={} are successfully written to datahub'.format(self.key, d))
+                X_predict = df[df.date == d][
+                    text_data_columns + categorical_data_columns + multicategorical_data_columns + numeric_data_columns]
+                y = df[df.date == d]['target']
+
+                revenue_prediction = model.predict_proba(X_predict)
+
+                prd = df[df.date == d]
+
+                prd.insert(len(prd.columns), column='revenue_current_month_probability', value=revenue_prediction[:, 0])
+                prd.insert(len(prd.columns), column='revenue_next_1_month_probability', value=revenue_prediction[:, 1])
+                prd.insert(len(prd.columns), column='revenue_next_2_month_probability', value=revenue_prediction[:, 2])
+                prd.insert(len(prd.columns), column='revenue_next_2_plus_months_probability',
+                           value=revenue_prediction[:, 3])
+
+                #         assert len(
+                #             prd) > 3000, 'predictions data set has a problem! Too small data set!!!'
+
+                prd = prd[['revenue_current_month_probability', 'revenue_next_1_month_probability',
+                           'revenue_next_2_month_probability', 'revenue_next_2_plus_months_probability', 'position_id']]
+                prd.insert(len(prd.columns), column='date', value=d)
+                prd.insert(len(prd.columns), column='scope', value=scope)
+
+                prd = prd.set_index('position_id')
+
+                to_datahub.write_info(prd, task_name='revenue_probability_{}'.format(scope))
+
+                logger.info(
+                    '{} predictions per date={} for scope {} are successfully written to datahub'.format(self.key, d,
+                                                                                                         scope))

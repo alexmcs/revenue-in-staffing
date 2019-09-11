@@ -137,7 +137,7 @@ def revenue_in_staffing_retrospective_predictions(key = 'revenue'):
     def query_list_of_dates(x):
 
         try:
-            params = (key, x['date'], x['next_date'])
+            params = ('revenue_probability', x['date'], x['next_date'])
             df = postgres.get_data('days_list_for_predictions.sql', param=params, param_type='tuple')
 
             return list(df.date)
@@ -149,45 +149,64 @@ def revenue_in_staffing_retrospective_predictions(key = 'revenue'):
 
         return list(set(x['list_of_dates']) - set(x['dates_with_predictions']))
 
+    def models_list(x):
+
+        return [x['assigned'], x['in_staffing'], x['no_staffing_required']]
+
     files = []
 
-    for f in listdir('../data/'):
-        if '{}_model_'.format(key) in f:
-            files.append(f)
+    for scope in ['no_staffing_required', 'assigned', 'in_staffing']:
+
+        for f in listdir('../data/'):
+            if '{}_{}_model_'.format(key, scope) in f:
+                files.append(f)
 
     df = pd.DataFrame(files, columns=['files'])
     df['date'] = df['files'].map(lambda x: x.split('.')[0][-10:]).astype(str)
 
-    df = df.sort_values('date')
-    df['next_date'] = df.date.shift(-1).fillna(datetime.datetime.strftime(datetime.datetime.today(), '%Y-%m-%d'))
-    df['list_of_dates'] = df.apply(list_of_dates, axis=1)
-    df['dates_with_predictions'] = df.apply(query_list_of_dates, axis=1)
-    df['dates_without_predictions'] = df.apply(dates_without_predictions, axis=1)
-    df['list_len'] = df['dates_without_predictions'].map(lambda x: len(x))
-    df = df[df['list_len'] != 0]
-    df = df.drop(['date', 'next_date', 'list_of_dates', 'dates_with_predictions'], 1)
+    df['scope'] = df.files.map(lambda f: f[8:][:-21])
 
-    for ind in df[df.list_len > 1].index:
+    tmp = pd.DataFrame()
+    tmp['date'] = df.date.unique()
+    tmp = tmp.sort_values('date')
+    tmp['next_date'] = tmp.date.shift(-1).fillna(datetime.datetime.strftime(datetime.datetime.today(), '%Y-%m-%d'))
 
-        model_file = df.at[ind, 'files']
-        dates = df.at[ind, 'dates_without_predictions']
+    for scope in ['no_staffing_required', 'assigned', 'in_staffing']:
+        tmp[scope] = tmp.date.map(lambda d: list(df[(df.date == d) & (df.scope == scope)].files))
+        tmp[scope] = tmp[scope].map(lambda a: a[0] if a else None)
+        tmp[scope] = tmp[scope].fillna(method='ffill')
+
+    tmp['models'] = tmp.apply(models_list, axis=1)
+    tmp = tmp.drop(['no_staffing_required', 'assigned', 'in_staffing'], 1)
+
+    tmp['list_of_dates'] = tmp.apply(list_of_dates, axis=1)
+    tmp['dates_with_predictions'] = tmp.apply(query_list_of_dates, axis=1)
+    tmp['dates_without_predictions'] = tmp.apply(dates_without_predictions, axis=1)
+    tmp['list_len'] = tmp['dates_without_predictions'].map(lambda x: len(x))
+    tmp = tmp[tmp['list_len'] != 0]
+    tmp = tmp.drop(['date', 'next_date', 'list_of_dates', 'dates_with_predictions'], 1)
+
+    for ind in tmp[tmp.list_len > 1].index:
+
+        model_files = tmp.at[ind, 'models']
+        dates = tmp.at[ind, 'dates_without_predictions']
 
         rv = revenue.RevenueInStaffing(job='making_predictions', date=dates)
-        rv.making_predictions(model_file=model_file)
+        rv.making_predictions(model_files=model_files)
 
-    if df[df.list_len == 1].shape[0] >=1:
+    if tmp[tmp.list_len == 1].shape[0] >=1:
 
-        for ind in df[df.list_len == 1].index:
+        for ind in tmp[tmp.list_len == 1].index:
 
-            model_file = df.at[ind, 'files']
-            dates = df.at[ind, 'dates_without_predictions']
+            model_files = tmp.at[ind, 'models']
+            dates = tmp.at[ind, 'dates_without_predictions']
             dates.append(
                 datetime.datetime.strftime(
                     datetime.datetime.strptime(dates[0], '%Y-%m-%d') - relativedelta(days=1), '%Y-%m-%d')
             )
 
             rv = revenue.RevenueInStaffing(job='making_predictions', date=dates)
-            rv.making_predictions(model_file=model_file, dates_type='single_day')
+            rv.making_predictions(model_files=model_files, dates_type='single_day')
 
     logger.info('revenue in staffing making predictions script successfully finished')
 

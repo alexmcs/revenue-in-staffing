@@ -370,10 +370,10 @@ class Termination(features.Features):
 
         logger.info('{} making predictions script started'.format(self.key))
 
+        logger.debug('date parameter in the object are {}'.format(str(self.date)))
+
         df_proc = aux.DataFrameProcessor()
         self.feature_processing()
-
-        logger.debug('date parameter in the object are {}'.format(str(self.date)))
 
         if dates_type != 'none':
             self.df = self.df[self.df.date == max(self.df.date)]
@@ -438,6 +438,6 @@ class Termination(features.Features):
 
                 prd = prd.set_index('position_id')
 
-                to_datahub.write_info(prd, task_name='is_billable_'.format(scope))
+                to_datahub.write_info(prd, task_name='is_billable_{}'.format(scope))
 
                 logger.info('{} predictions per date={} for scope {} are successfully written to datahub'.format(self.key, d, scope))
