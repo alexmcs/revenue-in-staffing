@@ -128,7 +128,7 @@ def revenue_in_staffing_retrospective_predictions(key = 'revenue'):
         lst = []
         d = datetime.datetime.strptime(x['date'], '%Y-%m-%d')
 
-        while d < datetime.datetime.strptime(x['next_date'], '%Y-%m-%d'):
+        while d <= datetime.datetime.strptime(x['next_date'], '%Y-%m-%d'):
             lst.append(datetime.datetime.strftime(d, '%Y-%m-%d'))
             d = d + relativedelta(days=1)
 
@@ -221,7 +221,7 @@ def is_billable_retrospective_predictions(key = 'is_billable'):
         lst = []
         d = datetime.datetime.strptime(x['date'], '%Y-%m-%d')
 
-        while d < datetime.datetime.strptime(x['next_date'], '%Y-%m-%d'):
+        while d <= datetime.datetime.strptime(x['next_date'], '%Y-%m-%d'):
             lst.append(datetime.datetime.strftime(d, '%Y-%m-%d'))
             d = d + relativedelta(days=1)
 
