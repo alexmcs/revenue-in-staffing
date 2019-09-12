@@ -11,7 +11,7 @@ with dates as (
 --or extract(day from date) = 28
 select *
 from (
-	select * from generate_series(current_date, current_date - interval '1.5 year', '-1 day') date
+	select * from generate_series(current_date - interval '0.5 year', current_date - interval '2 year', '-1 day') date
 	) d
 where extract(day from date) = extract(day from current_date)
 )
