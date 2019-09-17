@@ -407,6 +407,18 @@ class Termination(features.Features):
             filename = '../data/{}'.format(model_file)
             model = pickle.load(open(filename, 'rb'))
 
+            features = model.named_steps['features']
+            f = pd.DataFrame(features.get_feature_names(), columns=['pipeline_feature_names'])
+            f['features'] = f.pipeline_feature_names.map(lambda f: f.split('__')[0])
+
+            new_columns = set(f.drop_duplicates('features').features) - set(df.columns)
+
+            logger.info('There are columns from the trained model that are no in the prediction dataset {}'.format(
+                str(new_columns)))
+
+            for col in new_columns:
+                df[col] = 0
+
             df = df_proc.datetime_cols(df, ['date'])
             df.date = df.date.dt.strftime('%Y-%m-%d')
 
