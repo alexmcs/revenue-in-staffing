@@ -48,9 +48,10 @@ def is_billable_retrospective_models_training(min_date = '2019-07-31', key = 'is
         min_date_dt = min_date_dt + relativedelta(months=1)
 
     models = []
-    for f in listdir('../data/'):
-        if '{}_model_'.format(key) in f:
-            models.append(f)
+    for scope in ['no_staffing_required', 'assigned', 'in_staffing']:
+        for f in listdir('../data/'):
+            if '{}_{}_model_'.format(key, scope) in f:
+                models.append(f)
 
     df = pd.DataFrame(models, columns=['files'])
     df['date'] = df['files'].map(lambda x: x.split('.')[0][-10:]).astype(str)
