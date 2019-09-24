@@ -136,7 +136,7 @@ class City_Country:
 
         df[column_name] = df[column_name].astype(str)
 
-        if '"parent": {' in df.at[0, 'staffing_locations']: #to fix ParentLocation in staffing_location json
+        if '"parent": {' in df.at[min(df.index), column_name]:  # to fix ParentLocation in staffing_location json
             df[column_name+'_ids'] = df[column_name].map(
                 lambda x:
                 [
