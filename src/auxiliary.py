@@ -135,10 +135,24 @@ class City_Country:
         df = data.copy()
 
         df[column_name] = df[column_name].astype(str)
-        df[column_name+'_ids'] = df[column_name].map(
-            lambda x:
-            [loc.split('", "name": "')[0] for loc in x.split('"id": "')[1:]]
-        )
+
+        if '"parent": {' in df.at[0, 'staffing_locations']: #to fix ParentLocation in staffing_location json
+            df[column_name+'_ids'] = df[column_name].map(
+                lambda x:
+                [
+                    loc.split('", "name": "')[0] for loc in [
+                        a for a in [
+                            k if '"parent": {' in k else '' for k in x.split('"id": "')[1:]
+                        ] if a != ''
+                    ]
+                ]
+            )
+
+        else:
+            df[column_name + '_ids'] = df[column_name].map(
+                lambda x:
+                [loc.split('", "name": "')[0] for loc in x.split('"id": "')[1:]]
+            )
 
         df['is_any_location'] = df[column_name+'_ids'].map(lambda x: x[0] if x else '')  # id for 'Any Location' = -1
 
