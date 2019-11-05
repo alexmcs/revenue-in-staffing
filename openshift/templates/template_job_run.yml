@@ -54,6 +54,7 @@ objects:
               - key: kubernetes.io/hostname
                 operator: In
                 values:
+                - ecsc00a03e06.epam.com
                 - ecsc00a03e07.epam.com
                 - ecsc00a03e08.epam.com
                 - ecsc00a04290.epam.com
