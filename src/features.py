@@ -1465,7 +1465,7 @@ class Features:
             logger.info(c)
             country_id = [k for k, v in countries_dict.items() if v == c][0]
 
-            if c in ['Israel', 'Portugal', 'Viet Nam']:  # no calendar updates for this countries
+            if c in ['Israel', 'Portugal', 'Viet Nam', 'Argentina']:  # no calendar updates for this countries
                 c_cal = pd.DataFrame({'day': pd.bdate_range(start=day_start, end=day_end)})
                 c_cal[country_id] = 1
 
