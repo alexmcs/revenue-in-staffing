@@ -31,6 +31,7 @@ To be done
 
 - Add SHAP for explainability and analyzing issues with low-quality predictions if problem areas are identified.
 - Add unit tests.
+- Add adversarial validation strategy to check possible data drifts.
 - Switch from XGBoost to LightGBM. This will speed up model training, reduce memory consumption during data processing, improve handling of categorical variables, and obtain additional benefits due to the leaf-wise tree growth strategy.
 - For tracking model versions and quality metrics, switch to using the MLFlow framework. This will enhance experiment tracking, model reproducibility, model packaging and deployment, and model versioning.
 - Incorporate additional data into the model:
